@@ -7,7 +7,7 @@ const bodyParser = require("body-parser")
 const tab = [
     { id: 1, log: "AAA", pass: "PASS1", wiek: 10, uczen: "checked", plec: "m" },
     { id: 2, log: "Jakub", pass: "PASS2", wiek: 17, uczen: "checked", plec: "m" },
-    { id: 3, log: "XYZ", pass: "PASS2", wiek: 19, uczen: "checked", plec: "k" },
+    { id: 3, log: "XYZ", pass: "PASS2", wiek: 19, uczen: "null", plec: "k" },
 ]
 
 let receivedRegister = {};
@@ -33,6 +33,7 @@ app.get("/register", (req,res) => {
     }else if( free ){
         tab.push({ id: tab.length + 1, log: receivedRegister.login, pass: receivedRegister.pass, wiek: receivedRegister.age, uczen: receivedRegister.student, plec: receivedRegister.gender })
         res.send(`Zarejestrowano uzytkownika ${receivedRegister.login}`)
+        free=null
     }else if( !free ){
         receivedRegister = {}
         free = null;
@@ -63,60 +64,93 @@ app.get("/admin", (req,res) => {
 })
 
 app.get("/show", (req,res) => {
-    let result = '<link rel="stylesheet" href="css/style.css"/><div class="subpageBar"><a class="link" href="/sort">sort</a><a class="link" href="/gender">gender</a><a class="link" href="/show">show</a></div><table class="table">';
+    if ( logged ){
+        let result = '<link rel="stylesheet" href="css/style.css"/><div class="subpageBar"><a class="link" href="/sort">sort</a><a class="link" href="/gender">gender</a><a class="link" href="/show">show</a></div><table class="table">';
 
-    tab.forEach( user =>{
-        result += `<tr class='row' ><td class='cell'>id: ${user.id}</td><td class='cell'>login: ${user.log}</td><td class='cell'>haslo: ${user.pass}</td><td class='cell'>wiek: ${user.wiek}</td><td class='cell'>uczen: ${user.uczen}</td><td class='cell'>płeć: ${user.plec}</td></tr>`
-    })
+        tab.forEach( user =>{
+            result += `<tr class='row' ><td class='cell'>id: ${user.id}</td><td class='cell'>user: ${user.log} - ${user.pass}</td><td class='cell'>wiek: ${user.wiek}</td>`
+            if( user.uczen == "checked" ){
+                result += `<td class='cell'>uczen: <input type='checkbox' checked disabled /></td>`
+            }else{
+                result += `<td class='cell'>uczen: <input type='checkbox' blocked disabled /></td>`
+            }
+            result+=`<td class='cell'>płeć: ${user.plec}</td></tr>`
+        })
 
-    result+='</table>'
+        result+='</table>'
 
-    res.send(result);
+        res.send(result);
+    }else{
+        res.redirect("/admin")
+    }
 })
 
 app.get("/gender", (req,res) => {
-    let result = '<link rel="stylesheet" href="css/style.css"/><div class="subpageBar"><a class="link" href="/sort">sort</a><a class="link" href="/gender">gender</a><a class="link" href="/show">show</a></div><table class="table">';
+    if( logged ){
+        let result = '<link rel="stylesheet" href="css/style.css"/><div class="subpageBar"><a class="link" href="/sort">sort</a><a class="link" href="/gender">gender</a><a class="link" href="/show">show</a></div><table class="table">';
 
-    let part = tab.filter( user => user.plec == "k");
+        let part = tab.filter( user => user.plec == "k");
 
-    part.forEach( user =>{
-        result += `<tr class='row' ><td class='cell'>id: ${user.id}</td><td class='cell'>płeć: ${user.plec}</td></tr>`
-    })
+        part.forEach( user =>{
+            result += `<tr class='row' ><td class='cell'>id: ${user.id}</td><td class='cell'>płeć: ${user.plec}</td></tr>`
+        })
 
-    result+='</table>'
+        result+='</table>'
 
-    part = tab.filter( user => user.plec == "m");
+        part = tab.filter( user => user.plec == "m");
 
-    result+='<table class="table">'
+        result+='<table class="table">'
 
-    part.forEach( user =>{
-        result += `<tr class='row' ><td class='cell'>id: ${user.id}</td><td class='cell'>płeć: ${user.plec}</td></tr>`
-    })
-    result+='</table>'
+        part.forEach( user =>{
+            result += `<tr class='row' ><td class='cell'>id: ${user.id}</td><td class='cell'>płeć: ${user.plec}</td></tr>`
+        })
+        result+='</table>'
 
-    res.send(result);
+        res.send(result);
+    }else{
+        res.redirect("/admin")
+    }
 })
 
 app.get("/sort", (req,res) => {
-    let result = `<link rel="stylesheet" href="css/style.css"/><form method="POST" action="/sort" onChange="this.submit()"> desc<input type="radio" name="sort" value="desc" /> asc<input type="radio" name="sort" value="asc" /> </form><table class="table">`;
-    
-    let n = [];
+        if ( logged ){
+            let result = `<link rel="stylesheet" href="css/style.css"/><div class="subpageBar"><a class="link" href="/sort">sort</a><a class="link" href="/gender">gender</a><a class="link" href="/show">show</a></div><form method="POST" action="/sort" onChange="this.submit()">`;
+        let n = [];
 
-    if( sortType == "asc"){
-        n = tab.sort((a,b) => parseFloat(a.wiek) - parseFloat(b.wiek));
+        if( sortType == "asc"){
+            n = tab.sort((a,b) => parseFloat(a.wiek) - parseFloat(b.wiek));
+            result += 'malejąco <input type="radio" name="sort" value="desc" /> rosnąco <input type="radio" name="sort" value="asc" checked />';
+        }else{
+            n = tab.sort((a,b) => parseFloat(b.wiek) - parseFloat(a.wiek));
+            result += 'malejąco <input type="radio" name="sort" value="desc" checked /> rosnąco<input type="radio" name="sort" value="asc" />';
+        }
+
+        result += '</form><table class="table">';
+
+        n.forEach( user =>{
+            result += `<tr class='row' ><td class='cell'>id: ${user.id}</td><td class='cell'>user: ${user.log} - ${user.pass}</td><td class='cell'>wiek: ${user.wiek}</td>`
+            if( user.uczen == "checked" ){
+                result += `<td class='cell'>uczen: <input type='checkbox' checked disabled /></td>`
+            }else{
+                result += `<td class='cell'>uczen: <input type='checkbox' blocked disabled /></td>`
+            }
+            result+=`<td class='cell'>płeć: ${user.plec}</td></tr>`
+        })
+
+        result+="</table>"
+
+        res.send(result)
     }else{
-        n = tab.sort((a,b) => parseFloat(b.wiek) - parseFloat(a.wiek));
+        res.redirect("/admin")
     }
-
-    n.forEach( user =>{
-        result += `<tr class='row' ><td class='cell'>id: ${user.id}</td><td class='cell'>login: ${user.log}</td><td class='cell'>haslo: ${user.pass}</td><td class='cell'>wiek: ${user.wiek}</td><td class='cell'>uczen: ${user.uczen}</td><td class='cell'>płeć: ${user.plec}</td></tr>`
-    })
-    result+="</table>"
-
-    res.send(result)
 })
 
 app.post("/sort", (req,res) => {
-    sortType = req.body.sort;
+    sortType = req.body.sort
     res.redirect("/sort")
+})
+
+app.get("/logout", (req,res) => {
+    logged = false
+    res.redirect("/")
 })
